@@ -1,0 +1,1 @@
+export { contractAbiTool } from './contract';
