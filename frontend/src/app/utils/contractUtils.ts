@@ -52,74 +52,6 @@ export const getContractSourceCode = async (address: string, network: string = '
     }
 };
 
-// Function to display transaction data in a window
-export const openTransactionDataWindow = (data: string) => {
-    // Calculate position for top right corner
-    const screenWidth = window.screen.width;
-    const windowWidth = 600;
-    const windowHeight = 400;
-    const left = screenWidth - windowWidth - 20; // 20px margin from right edge
-    const top = 20; // 20px from top
-
-    const newWindow = window.open('', '_blank', `width=${windowWidth},height=${windowHeight},left=${left},top=${top}`);
-    if (newWindow) {
-        newWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Transaction Data</title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        background-color: #1f2937;
-                        color: #e5e7eb;
-                        padding: 20px;
-                        margin: 0;
-                    }
-                    h2 {
-                        color: white;
-                        margin-top: 0;
-                    }
-                    .data-container {
-                        background-color: #374151;
-                        padding: 16px;
-                        border-radius: 8px;
-                        word-break: break-all;
-                        white-space: pre-wrap;
-                        overflow-y: auto;
-                        max-height: 300px;
-                        font-family: monospace;
-                    }
-                </style>
-            </head>
-            <body>
-                <h2>Transaction Data</h2>
-                <div class="data-container">${data}</div>
-            </body>
-            </html>
-        `);
-        newWindow.document.close();
-    }
-};
-
-// Function to prepare arguments for transaction based on input types
-export const prepareArgs = (inputs: ContractInput[], inputValues: Record<string, string>) => {
-    return inputs.map(input => {
-        const value = inputValues[input.name || `param${input.type}`] || '';
-
-        // Handle different input types
-        if (input.type === 'address') {
-            return value as `0x${string}`;
-        } else if (input.type.startsWith('uint') || input.type.startsWith('int')) {
-            return value ? BigInt(value) : BigInt(0);
-        } else if (input.type === 'bool') {
-            return value.toLowerCase() === 'true';
-        } else {
-            return value;
-        }
-    });
-};
-
 // Add validation utilities
 export const isValidAddress = (address: string): boolean => {
     // Check if it's a proper Ethereum address format
@@ -207,4 +139,53 @@ export const validateInputs = (
     }
 
     return { isValid: true, error: null };
+};
+
+// Function to prepare arguments for transaction based on input types
+export const prepareArgs = (inputs: ContractInput[], inputValues: Record<string, string>): Array<string | bigint | boolean | Array<string | bigint | boolean>> => {
+    return inputs.map(input => {
+        const paramName = input.name || `param${input.type}`;
+        const value = inputValues[paramName] || '';
+
+        // Check if the type is an array (ends with [])
+        const isArray = input.type.endsWith('[]');
+
+        // For empty values
+        if (!value.trim()) {
+            return isArray ? [] : input.type === 'address' ? '0x0000000000000000000000000000000000000000'
+                : input.type.startsWith('uint') || input.type.startsWith('int') ? BigInt(0)
+                    : input.type === 'bool' ? false : '';
+        }
+
+        // Handle array types
+        if (isArray) {
+            // Split by comma and process each value
+            const arrayValues = value.split(',').map(item => item.trim());
+            const baseType = input.type.slice(0, -2); // Remove [] to get base type
+
+            // Convert each item in the array to the correct type
+            return arrayValues.map(item => {
+                if (baseType === 'address') {
+                    return item as `0x${string}`;
+                } else if (baseType.startsWith('uint') || baseType.startsWith('int')) {
+                    return BigInt(item);
+                } else if (baseType === 'bool') {
+                    return item.toLowerCase() === 'true';
+                } else {
+                    return item;
+                }
+            });
+        }
+
+        // Handle non-array types
+        if (input.type === 'address') {
+            return value as `0x${string}`;
+        } else if (input.type.startsWith('uint') || input.type.startsWith('int')) {
+            return BigInt(value);
+        } else if (input.type === 'bool') {
+            return value.toLowerCase() === 'true';
+        } else {
+            return value;
+        }
+    });
 }; 

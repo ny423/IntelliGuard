@@ -20,9 +20,19 @@ export const TransactionStatus: React.FC<TransactionStatusProps> = ({
             case 'idle':
                 return <p className="text-gray-500">No transaction in progress</p>;
             case 'preparing':
-                return <p className="text-blue-500">Preparing transaction...</p>;
+                return (
+                    <div className="text-blue-500">
+                        <p>Preparing transaction...</p>
+                        <p className="text-xs mt-1">A transaction data window should appear now. If not, check your browser&apos;s popup settings.</p>
+                    </div>
+                );
             case 'signing':
-                return <p className="text-yellow-500">Waiting for signature...</p>;
+                return (
+                    <div className="text-yellow-500">
+                        <p>Waiting for signature...</p>
+                        <p className="text-xs mt-1">Please check your wallet and approve the transaction.</p>
+                    </div>
+                );
             case 'submitted':
                 return (
                     <div className="text-green-500">

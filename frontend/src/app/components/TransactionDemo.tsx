@@ -4,7 +4,8 @@ import { useState, useEffect, JSX } from 'react';
 import { useAccount } from 'wagmi';
 import { useTransactionHook } from '../hooks/useTransactionHook';
 import { ContractFunction, EtherscanAbiItem } from '../types/contract';
-import { getContractSourceCode, openTransactionDataWindow, prepareArgs, validateInputs } from '../utils/contractUtils';
+import { getContractSourceCode, validateInputs, prepareArgs } from '../utils/contractUtils';
+import { openTransactionDataWindow } from '../utils/windowUtils';
 import ContractExplorer from './ContractExplorer';
 import ContractInteractionForm from './ContractInteractionForm';
 import TransactionStatus from './TransactionStatus';
@@ -22,6 +23,8 @@ export function TransactionDemo(): JSX.Element {
     const [selectedFunction, setSelectedFunction] = useState<ContractFunction | null>(null);
     const [inputValues, setInputValues] = useState<Record<string, string>>({});
     const [contractAbi, setContractAbi] = useState<EtherscanAbiItem[]>([]);
+    // Flag to prevent multiple windows from opening
+    const [isWindowOpened, setIsWindowOpened] = useState<boolean>(false);
 
     // Reset input values when selecting a different function
     useEffect(() => {
@@ -31,6 +34,13 @@ export function TransactionDemo(): JSX.Element {
                 newInputValues[input.name || `param${input.type}`] = '';
             });
             setInputValues(newInputValues);
+
+            // Check if the selected function has array parameters
+            const hasArrayParams = selectedFunction.inputs.some(input => input.type.endsWith('[]'));
+            if (hasArrayParams) {
+                console.log('Function contains array parameters. Make sure to format inputs correctly.');
+                // You could also add a notification/toast message here if you have a UI component for it
+            }
         }
     }, [selectedFunction]);
 
@@ -137,6 +147,9 @@ export function TransactionDemo(): JSX.Element {
             return;
         }
 
+        // Determine if this is a read-only function
+        const isReadOnly = selectedFunction.stateMutability === 'view' || selectedFunction.stateMutability === 'pure';
+
         try {
             // First validate all inputs
             const validation = validateInputs(selectedFunction.inputs, inputValues);
@@ -150,12 +163,28 @@ export function TransactionDemo(): JSX.Element {
             // All inputs are valid, prepare the arguments
             const args = prepareArgs(selectedFunction.inputs, inputValues);
 
+            if (isReadOnly) {
+                // For read-only functions, we should implement a different flow
+                // that doesn't require a wallet transaction
+                alert(`Read function selected: ${selectedFunction.name}\n\nThis would call the contract's read function with the provided arguments. This feature is not yet implemented.`);
+
+                // Here you would typically:
+                // 1. Use a provider to call the read function 
+                // 2. Display the result to the user
+                // 3. No wallet popup or transaction signing is needed
+
+                return;
+            }
+
+            // For write functions, show the popup blocker notice
+            alert('You will see two windows: first a transaction data window, then your wallet popup. If you don\'t see the transaction data window, please check your popup blocker settings.');
+
             // Prepare the transaction
             await prepareTransaction({
                 address: contractAddress as `0x${string}`,
                 abi: contractAbi,
                 functionName: selectedFunction.name,
-                args
+                ...args
             });
         } catch (err) {
             console.error('Error in transaction process:', err);
@@ -168,7 +197,28 @@ export function TransactionDemo(): JSX.Element {
                 if (errorMessage.includes('invalid address')) {
                     errorMessage = 'Invalid Ethereum address provided. Address must be 42 characters (0x + 40 hex characters).';
                 } else if (errorMessage.includes('not a valid array')) {
-                    errorMessage = 'One of the inputs should be an array. For array inputs, please separate multiple values with commas.';
+                    // Find which parameter might be the array causing problems
+                    const arrayParams = selectedFunction.inputs
+                        .filter(input => input.type.endsWith('[]'))
+                        .map(input => input.name || input.type);
+
+                    const arrayParamList = arrayParams.length > 0
+                        ? `\n\nPossible array parameters causing this error: ${arrayParams.join(', ')}`
+                        : '';
+
+                    errorMessage = `Array input format error: One of your inputs should be formatted as an array. 
+For array inputs, please separate multiple values with commas (e.g., "0x123,0x456").
+If you're providing only one value for an array parameter, make sure you're formatting it correctly.${arrayParamList}`;
+                } else if (errorMessage.includes('Error encoding function data')) {
+                    errorMessage = `Error encoding function data. This often happens when the format of your inputs doesn't match what the contract expects.
+                    
+Please check:
+1. Array inputs should be comma-separated values
+2. Address values should be valid Ethereum addresses (0x...)
+3. Integer values should be valid numbers
+4. Boolean values should be "true" or "false"
+                    
+Original error: ${errorMessage}`;
                 }
 
                 alert(`Error: ${errorMessage}`);
@@ -178,33 +228,54 @@ export function TransactionDemo(): JSX.Element {
         }
     };
 
-    // Update the useEffect for transaction execution to only proceed if status is 'preparing'
+    // Update the useEffect for transaction execution - fixed error handling
     useEffect(() => {
+        // Prevent running effect cleanup logic when component unmounts
+        let isMounted = true;
+
         const handlePreparedTransaction = async () => {
-            if (rawTransactionData && status === 'preparing') {
-                try {
-                    // Start the transaction execution process - this will trigger the wallet extension
-                    const executionPromise = executeTransaction();
+            if (!rawTransactionData || status !== 'preparing' || !isMounted) return;
 
-                    // After a small delay to ensure wallet popup has appeared, show the tx data window
-                    setTimeout(() => {
-                        // Only open the window if we're still in 'preparing' or 'signing' status
-                        // This prevents opening it if an error occurred in between
-                        if (status === 'preparing' || status === 'signing') {
-                            openTransactionDataWindow(rawTransactionData);
-                        }
-                    }, 2000);
+            // To prevent multiple windows from opening
+            if (isWindowOpened) return;
 
-                    // Wait for the transaction execution to complete
-                    await executionPromise;
-                } catch (err) {
-                    console.error('Error executing transaction:', err);
+            try {
+                console.log('Transaction ready, showing data window...');
+
+                // Open transaction data window BEFORE executing the transaction
+                const dataWindow = openTransactionDataWindow(rawTransactionData);
+                if (dataWindow) {
+                    setIsWindowOpened(true);
+                    console.log('Transaction data window opened successfully');
+                } else {
+                    console.warn('Failed to open transaction data window');
                 }
+
+                // Start transaction execution after opening the window
+                console.log('Starting transaction execution...');
+                await executeTransaction();
+                console.log('Transaction execution completed');
+
+            } catch (err) {
+                console.error('Error executing transaction:', err);
+                setIsWindowOpened(false);
             }
         };
 
         handlePreparedTransaction();
-    }, [rawTransactionData, status, executeTransaction]);
+
+        // Cleanup when component unmounts or dependencies change
+        return () => {
+            isMounted = false;
+        };
+    }, [rawTransactionData, status, executeTransaction, isWindowOpened]);
+
+    // Reset the window opened flag when transaction is reset or completes
+    useEffect(() => {
+        if (status === 'idle' || status === 'error' || status === 'submitted') {
+            setIsWindowOpened(false);
+        }
+    }, [status]);
 
     return (
         <div className="max-w-6xl mx-auto p-6 bg-gray-800 rounded-lg shadow-lg">
