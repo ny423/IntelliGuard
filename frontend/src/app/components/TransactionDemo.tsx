@@ -163,6 +163,35 @@ export function TransactionDemo(): JSX.Element {
             // All inputs are valid, prepare the arguments
             const args = prepareArgs(selectedFunction.inputs, inputValues);
 
+            // Process array arguments - convert special string format back to actual arrays
+            const processedArgs = args.map(arg => {
+                if (typeof arg === 'string' && arg.startsWith('__ARRAY__:')) {
+                    // Parse our special array format
+                    const parts = arg.split(':');
+                    const baseType = parts[1];
+                    const values = parts[2].split('|||');
+
+                    // Convert array values to their correct types
+                    return values.map(item => {
+                        if (baseType === 'address') {
+                            return item as `0x${string}`;
+                        } else if (baseType.startsWith('uint') || baseType.startsWith('int')) {
+                            return BigInt(item);
+                        } else if (baseType === 'bool') {
+                            return item === 'true';
+                        } else {
+                            return item;
+                        }
+                    });
+                } else if (arg === '[]') {
+                    // Handle empty arrays
+                    return [];
+                } else {
+                    // Return non-array values as is
+                    return arg;
+                }
+            });
+
             if (isReadOnly) {
                 // For read-only functions, we should implement a different flow
                 // that doesn't require a wallet transaction
@@ -184,7 +213,7 @@ export function TransactionDemo(): JSX.Element {
                 address: contractAddress as `0x${string}`,
                 abi: contractAbi,
                 functionName: selectedFunction.name,
-                ...args
+                args: processedArgs as readonly (string | number | bigint | boolean | `0x${string}`)[]
             });
         } catch (err) {
             console.error('Error in transaction process:', err);

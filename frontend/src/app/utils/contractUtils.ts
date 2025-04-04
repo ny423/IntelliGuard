@@ -142,50 +142,73 @@ export const validateInputs = (
 };
 
 // Function to prepare arguments for transaction based on input types
-export const prepareArgs = (inputs: ContractInput[], inputValues: Record<string, string>): Array<string | bigint | boolean | Array<string | bigint | boolean>> => {
-    return inputs.map(input => {
+export const prepareArgs = (inputs: ContractInput[], inputValues: Record<string, string>): readonly (string | number | bigint | boolean | `0x${string}`)[] => {
+    const result: (string | number | bigint | boolean | `0x${string}`)[] = [];
+
+    for (const input of inputs) {
         const paramName = input.name || `param${input.type}`;
         const value = inputValues[paramName] || '';
 
         // Check if the type is an array (ends with [])
         const isArray = input.type.endsWith('[]');
 
-        // For empty values
-        if (!value.trim()) {
-            return isArray ? [] : input.type === 'address' ? '0x0000000000000000000000000000000000000000'
-                : input.type.startsWith('uint') || input.type.startsWith('int') ? BigInt(0)
-                    : input.type === 'bool' ? false : '';
-        }
-
-        // Handle array types
         if (isArray) {
-            // Split by comma and process each value
-            const arrayValues = value.split(',').map(item => item.trim());
-            const baseType = input.type.slice(0, -2); // Remove [] to get base type
+            // For array inputs
+            if (!value.trim()) {
+                // For empty arrays, Viem needs us to pass an empty array
+                // But we can't directly push an array into our result array
+                // So for now, we'll just add a placeholder
+                // We'll need to handle this in the calling code
+                result.push('[]' as string);
+            } else {
+                // Split by comma and process each value
+                const arrayValues = value.split(',').map(item => item.trim());
+                const baseType = input.type.slice(0, -2); // Remove [] to get base type
 
-            // Convert each item in the array to the correct type
-            return arrayValues.map(item => {
-                if (baseType === 'address') {
-                    return item as `0x${string}`;
-                } else if (baseType.startsWith('uint') || baseType.startsWith('int')) {
-                    return BigInt(item);
-                } else if (baseType === 'bool') {
-                    return item.toLowerCase() === 'true';
-                } else {
-                    return item;
-                }
-            });
-        }
+                // Since we can't add an array directly to our result (TypeScript type constraints),
+                // we'll add a special string format that we'll parse in TransactionDemo
+                const processedArrayString = arrayValues.map(item => {
+                    if (baseType === 'address') {
+                        return item; // Leave as string for now
+                    } else if (baseType.startsWith('uint') || baseType.startsWith('int')) {
+                        return item; // Leave as string for now
+                    } else if (baseType === 'bool') {
+                        return item.toLowerCase();
+                    } else {
+                        return item;
+                    }
+                }).join('|||'); // Use a special separator that's unlikely to appear in values
 
-        // Handle non-array types
-        if (input.type === 'address') {
-            return value as `0x${string}`;
-        } else if (input.type.startsWith('uint') || input.type.startsWith('int')) {
-            return BigInt(value);
-        } else if (input.type === 'bool') {
-            return value.toLowerCase() === 'true';
+                // Add a special prefix so we know this is an array in string form
+                result.push(`__ARRAY__:${baseType}:${processedArrayString}` as string);
+            }
         } else {
-            return value;
+            // For non-array inputs
+            if (!value.trim()) {
+                // Default values for empty inputs
+                if (input.type === 'address') {
+                    result.push('0x0000000000000000000000000000000000000000' as `0x${string}`);
+                } else if (input.type.startsWith('uint') || input.type.startsWith('int')) {
+                    result.push(BigInt(0));
+                } else if (input.type === 'bool') {
+                    result.push(false);
+                } else {
+                    result.push('');
+                }
+            } else {
+                // Convert based on type
+                if (input.type === 'address') {
+                    result.push(value as `0x${string}`);
+                } else if (input.type.startsWith('uint') || input.type.startsWith('int')) {
+                    result.push(BigInt(value));
+                } else if (input.type === 'bool') {
+                    result.push(value.toLowerCase() === 'true');
+                } else {
+                    result.push(value);
+                }
+            }
         }
-    });
+    }
+
+    return result;
 }; 
