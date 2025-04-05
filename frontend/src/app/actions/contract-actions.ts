@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use server';
 
 import { multiAgentWorkflow } from '@/mastra/workflow/multi-agent-workflow';
@@ -62,18 +63,18 @@ export async function analyzeTransaction(params: TransactionAnalysisParams): Pro
         return {
             success: true,
             contract: {
-                address: contractResult.getContractStep.output.contractAddress,
-                isVerified: contractResult.getContractStep.output.isVerified,
+                address: (contractResult.getContractStep as any).output.contractAddress,
+                isVerified: (contractResult.getContractStep as any).output.isVerified,
             },
             analysis: {
-                securityIssues: contractResult.analyzeContractStep.output.securityIssues,
-                stateChanges: contractResult.analyzeContractStep.output.stateChanges,
-                score: contractResult.analyzeContractStep.output.score,
+                securityIssues: (contractResult.analyzeContractStep as any).output.securityIssues,
+                stateChanges: (contractResult.analyzeContractStep as any).output.stateChanges,
+                score: (contractResult.analyzeContractStep as any).output.score,
             },
             recommendations: {
-                recommendations: contractResult.recommendationStep.output.recommendations,
-                prioritizedActions: contractResult.recommendationStep.output.prioritizedActions,
-                summary: contractResult.recommendationStep.output.summary,
+                recommendations: (contractResult.recommendationStep as any).output.recommendations,
+                prioritizedActions: (contractResult.recommendationStep as any).output.prioritizedActions,
+                summary: (contractResult.recommendationStep as any).output.summary,
             },
             debugLogs
         };
