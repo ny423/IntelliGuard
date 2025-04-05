@@ -1,4 +1,3 @@
-// @ts-expect-error - Workflow execution results type checking
 'use server';
 
 import { multiAgentWorkflow } from '@/mastra/workflow/multi-agent-workflow';
