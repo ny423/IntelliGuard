@@ -393,6 +393,8 @@ Original error: ${errorMessage}`;
                 onClose={handleCloseSidebar}
                 contractAddress={contractAddress}
                 network={network}
+                functionName={selectedFunction?.name || ''}
+                functionArgs={Object.values(inputValues)}
             />
         </div>
     );

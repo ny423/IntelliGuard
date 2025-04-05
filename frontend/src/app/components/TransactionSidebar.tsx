@@ -9,6 +9,8 @@ interface TransactionSidebarProps {
     network: string;
     isOpen: boolean;
     onClose: () => void;
+    functionName: string;
+    functionArgs: string[];
 }
 
 interface AnalysisResults {
@@ -36,7 +38,9 @@ const TransactionSidebar: React.FC<TransactionSidebarProps> = ({
     contractAddress,
     network,
     isOpen,
-    onClose
+    onClose,
+    functionName,
+    functionArgs
 }) => {
     const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -68,7 +72,9 @@ const TransactionSidebar: React.FC<TransactionSidebarProps> = ({
             const result = await analyzeTransaction({
                 address: contractAddress,
                 network: network,
-                transactionData: data
+                transactionData: data,
+                functionName: functionName,
+                functionArgs: functionArgs
             });
 
             console.log('Analysis completed:', result.success ? 'Success' : 'Failed');

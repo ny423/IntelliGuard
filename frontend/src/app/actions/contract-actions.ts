@@ -8,6 +8,8 @@ interface TransactionAnalysisParams {
     address: string;
     network: string;
     transactionData: string;
+    functionName: string;
+    functionArgs: string[];
 }
 
 interface AnalysisResult {

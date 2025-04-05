@@ -1,7 +1,6 @@
 import { xai } from '@ai-sdk/xai';
 import { Agent } from '@mastra/core/agent';
 import { contractAbiTool } from '../tools';
-import { z } from 'zod';
 
 export const fetchContractAgent = new Agent({
   name: 'Fetch Contract Source Code Agent',

@@ -4,25 +4,28 @@ import { getContractSourceCode } from "../tools/contract";
 import { Agent } from "@mastra/core/agent";
 import { xai } from "@ai-sdk/xai";
 
-// // Define the interface for workflow execution response
-// interface WorkflowExecutionResult {
-//     getStepResult: (stepId: string) => Promise<Record<string, any>>;
-// }
-
-// // Define the interface for the workflow trigger data
-// interface WorkflowTriggerData {
-//     address: string;
-//     network: string;
-//     transactionData: string;
-// }
-
 // Create the analyzer agent
 const contractAnalyzerAgent = new Agent({
     name: "ContractAnalyzer",
     instructions: `You are a smart contract security expert. When given contract code and transaction details:
-    1. Analyze the state change and security issues after the transaction only on the user side
-    2. Only report potential issues (authorization issues, state changes, etc.) with the transaction (No general recommendations that can be applied to all transactions)
-    3. Score the transaction from 0 to 100 based on the potential issues`,
+1. First decode the transaction details and identify which function is called, with the arguments
+2. Analyze the state change and security issues mentioned in the following table after the transaction only on the user side
+3. Only report potential issues mentioned below
+4. Score the transaction from 0 to 100 based on the potential issues, based on the following table:
+
+User-Side Dangers in a Single Transaction (with Penalty Scores)
+#	Violation in Transaction	Reason It's Dangerous	Penalty
+1	Approving unlimited allowance (approve(max) or 2^256-1)	Malicious contract can drain all your tokens later.	–30
+2	Calling an unknown contract (not verified or trusted)	The logic is invisible — could steal funds, lock tokens, or run self-destruct.	–40
+3	Calling a function you don’t understand (e.g., multicall, delegatecall, or oddly named functions)	Could do more than expected, such as stealing tokens or taking approvals.	–25
+4	Sending tokens (transfer, transferFrom) to the wrong or suspicious address	Tokens are irreversible — once sent, they’re gone.	–20
+5	Sending native tokens (ETH, etc.) to a contract that doesn't handle them	Tokens may be lost forever if contract doesn’t have a fallback function.	–15
+6	Calling mint/burn/claim/airdrop on an untrusted contract	May trigger hidden approvals, token theft, or contract bricking.	–20
+7	Signing a transaction with unexpected calldata	Some attacks hide malicious calls in data, e.g., approve() to attacker.	–25
+8	Submitting a transaction with a clearly high gas limit or value (without knowing why)	Could result in unexpected costs or execution of malicious logic.	–10
+9	Interacting with proxy contracts with upgradable logic (if source is unknown)	You trust a contract that could change at any moment.	–15
+10	Not verifying network and chain ID (e.g., wrong L2)	You could sign on wrong network, lose funds or interact with a fake contract.	–10
+`,
     model: xai("grok-2-1212"),
 });
 
@@ -40,6 +43,8 @@ export const multiAgentWorkflow = new Workflow({
         address: z.string(),
         network: z.string(),
         transactionData: z.string(),
+        functionName: z.string(),
+        functionArgs: z.array(z.string()),
     }),
 });
 
