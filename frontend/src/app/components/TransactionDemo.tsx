@@ -367,7 +367,6 @@ Original error: ${errorMessage}`;
 
     return (
         <div className="max-w-6xl p-6 bg-gray-800 rounded-lg shadow-lg relative">
-            <h2 className="text-2xl font-bold text-white mb-6">Transaction Demo</h2>
 
             {isConnected ? (
                 <div className="flex flex-col md:flex-row gap-6">
