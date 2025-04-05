@@ -2,6 +2,9 @@
 
 IntelliGuard is a wallet toolkit, built on wallet connect sdks that provides intelligent smart contract security and monitoring solutions. It combines blockchain technology with modern web development to create a robust platform for smart contract security analysis and real-time monitoring.
 
+## Live Demo
+https://intelli-guard.vercel.app/
+
 ## 🚀 Features
 
 - Smart Contract Security Analysis
