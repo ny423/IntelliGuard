@@ -9,6 +9,32 @@ interface WindowOptions {
     top?: number;
 }
 
+// Transaction data sidebar callback type
+export type TransactionDataSidebarCallback = (data: string, show: boolean) => void;
+
+// Global variable to store the current sidebar callback
+let currentSidebarCallback: TransactionDataSidebarCallback | null = null;
+
+/**
+ * Sets the callback function to be used when showing transaction data in the sidebar
+ */
+export const setTransactionDataSidebarCallback = (callback: TransactionDataSidebarCallback | null): void => {
+    currentSidebarCallback = callback;
+};
+
+/**
+ * Shows transaction data in the sidebar if a callback is registered, otherwise falls back to popup window
+ */
+export const showTransactionDataInSidebar = (data: string): boolean => {
+    if (currentSidebarCallback) {
+        currentSidebarCallback(data, true);
+        return true;
+    }
+
+    // Fallback to popup window if no sidebar callback is registered
+    return openTransactionDataWindow(data) !== null;
+};
+
 /**
  * Opens a React component in a new window
  */
@@ -91,6 +117,7 @@ export const openComponentInWindow = (
 
 /**
  * Opens a transaction data window with the given data
+ * @deprecated Use showTransactionDataInSidebar instead
  */
 export const openTransactionDataWindow = (data: string): Window | null => {
     try {

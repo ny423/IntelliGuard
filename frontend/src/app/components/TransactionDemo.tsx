@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, JSX } from 'react';
+import { useState, useEffect, JSX, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useTransactionHook } from '../hooks/useTransactionHook';
 import { ContractFunction, EtherscanAbiItem } from '../types/contract';
 import { getContractSourceCode, validateInputs, prepareArgs } from '../utils/contractUtils';
-import { openTransactionDataWindow } from '../utils/windowUtils';
+import { showTransactionDataInSidebar, setTransactionDataSidebarCallback } from '../utils/windowUtils';
 import ContractExplorer from './ContractExplorer';
 import ContractInteractionForm from './ContractInteractionForm';
 import TransactionStatus from './TransactionStatus';
+import TransactionSidebar from './TransactionSidebar';
 
 // Main Transaction Demo component
 export function TransactionDemo(): JSX.Element {
@@ -23,8 +24,30 @@ export function TransactionDemo(): JSX.Element {
     const [selectedFunction, setSelectedFunction] = useState<ContractFunction | null>(null);
     const [inputValues, setInputValues] = useState<Record<string, string>>({});
     const [contractAbi, setContractAbi] = useState<EtherscanAbiItem[]>([]);
-    // Flag to prevent multiple windows from opening
+
+    // State for transaction data sidebar
+    const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+    const [sidebarData, setSidebarData] = useState<string>('');
+
+    // Flag to prevent multiple windows from opening (kept for backward compatibility)
     const [isWindowOpened, setIsWindowOpened] = useState<boolean>(false);
+
+    // Callback function for the transaction data sidebar
+    const handleTransactionDataSidebar = useCallback((data: string, show: boolean) => {
+        setSidebarData(data);
+        setIsSidebarOpen(show);
+        setIsWindowOpened(true); // Set this to true to prevent multiple windows
+    }, []);
+
+    // Register the sidebar callback when component mounts
+    useEffect(() => {
+        setTransactionDataSidebarCallback(handleTransactionDataSidebar);
+
+        // Cleanup when component unmounts
+        return () => {
+            setTransactionDataSidebarCallback(null);
+        };
+    }, [handleTransactionDataSidebar]);
 
     // Reset input values when selecting a different function
     useEffect(() => {
@@ -206,7 +229,7 @@ export function TransactionDemo(): JSX.Element {
             }
 
             // For write functions, show the popup blocker notice
-            alert('You will see two windows: first a transaction data window, then your wallet popup. If you don\'t see the transaction data window, please check your popup blocker settings.');
+            alert('You will see a transaction data sidebar appear on the left side of the page, followed by your wallet popup. Keep the sidebar open while approving the transaction in your wallet.');
 
             // Prepare the transaction
             await prepareTransaction({
@@ -257,7 +280,7 @@ Original error: ${errorMessage}`;
         }
     };
 
-    // Update the useEffect for transaction execution - fixed error handling
+    // Update the useEffect for transaction execution - now using sidebar
     useEffect(() => {
         // Prevent running effect cleanup logic when component unmounts
         let isMounted = true;
@@ -269,18 +292,17 @@ Original error: ${errorMessage}`;
             if (isWindowOpened) return;
 
             try {
-                console.log('Transaction ready, showing data window...');
+                console.log('Transaction ready, showing data in sidebar...');
 
-                // Open transaction data window BEFORE executing the transaction
-                const dataWindow = openTransactionDataWindow(rawTransactionData);
-                if (dataWindow) {
-                    setIsWindowOpened(true);
-                    console.log('Transaction data window opened successfully');
+                // Show transaction data in sidebar BEFORE executing the transaction
+                const sidebarShown = showTransactionDataInSidebar(rawTransactionData);
+                if (sidebarShown) {
+                    console.log('Transaction data sidebar shown successfully');
                 } else {
-                    console.warn('Failed to open transaction data window');
+                    console.warn('Failed to show transaction data sidebar');
                 }
 
-                // Start transaction execution after opening the window
+                // Start transaction execution after showing the data
                 console.log('Starting transaction execution...');
                 await executeTransaction();
                 console.log('Transaction execution completed');
@@ -288,6 +310,7 @@ Original error: ${errorMessage}`;
             } catch (err) {
                 console.error('Error executing transaction:', err);
                 setIsWindowOpened(false);
+                setIsSidebarOpen(false);
             }
         };
 
@@ -303,11 +326,20 @@ Original error: ${errorMessage}`;
     useEffect(() => {
         if (status === 'idle' || status === 'error' || status === 'submitted') {
             setIsWindowOpened(false);
+            // Close the sidebar only when the transaction completes, not when it's reset
+            if (status === 'submitted') {
+                setIsSidebarOpen(false);
+            }
         }
     }, [status]);
 
+    // Function to handle closing the sidebar
+    const handleCloseSidebar = () => {
+        setIsSidebarOpen(false);
+    };
+
     return (
-        <div className="max-w-6xl mx-auto p-6 bg-gray-800 rounded-lg shadow-lg">
+        <div className="max-w-6xl mx-auto p-6 bg-gray-800 rounded-lg shadow-lg relative">
             <h2 className="text-2xl font-bold text-white mb-6">Transaction Demo</h2>
 
             {isConnected ? (
@@ -353,6 +385,15 @@ Original error: ${errorMessage}`;
             ) : (
                 <p className="text-gray-400">Please connect your wallet to continue</p>
             )}
+
+            {/* Transaction Data Sidebar */}
+            <TransactionSidebar
+                data={sidebarData}
+                isOpen={isSidebarOpen}
+                onClose={handleCloseSidebar}
+                contractAddress={contractAddress}
+                network={network}
+            />
         </div>
     );
 }

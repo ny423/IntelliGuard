@@ -15,7 +15,10 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "viem": "^2.25.0",
-    "wagmi": "^2.14.16"
+    "wagmi": "^2.14.16",
+    "@ai-sdk/xai": "^1.2.6",
+    "@mastra/core": "^0.7.0",
+    "mastra": "^0.4.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
