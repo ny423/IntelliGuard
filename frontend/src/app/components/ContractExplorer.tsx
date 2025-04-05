@@ -3,8 +3,7 @@ import { ContractFunction } from '../types/contract';
 import FunctionItem from './FunctionItem';
 
 interface ContractExplorerProps {
-    network: 'mainnet' | 'sepolia' | 'goerli';
-    onNetworkChange: (network: 'mainnet' | 'sepolia' | 'goerli') => void;
+    network: 'mainnet' | 'sepolia' | 'celo' | 'celoAlfajores' | 'polygon' | 'polygonAmoy';
     contractAddress: string;
     onAddressChange: (address: string) => void;
     isLoading: boolean;
@@ -16,8 +15,6 @@ interface ContractExplorerProps {
 }
 
 export const ContractExplorer: React.FC<ContractExplorerProps> = ({
-    network,
-    onNetworkChange,
     contractAddress,
     onAddressChange,
     isLoading,
@@ -56,16 +53,6 @@ export const ContractExplorer: React.FC<ContractExplorerProps> = ({
             <h3 className="text-xl font-semibold text-white mb-4">Contract Explorer</h3>
 
             <div className="flex space-x-2 mb-4">
-                <select
-                    className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white flex-shrink-0"
-                    value={network}
-                    onChange={(e) => onNetworkChange(e.target.value as 'mainnet' | 'sepolia' | 'goerli')}
-                >
-                    <option value="mainnet">Mainnet</option>
-                    <option value="sepolia">Sepolia</option>
-                    <option value="goerli">Goerli</option>
-                </select>
-
                 <input
                     type="text"
                     className="flex-grow px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"

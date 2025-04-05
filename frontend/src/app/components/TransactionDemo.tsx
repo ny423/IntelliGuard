@@ -32,6 +32,28 @@ export function TransactionDemo(): JSX.Element {
     // Flag to prevent multiple windows from opening (kept for backward compatibility)
     const [isWindowOpened, setIsWindowOpened] = useState<boolean>(false);
 
+    // Map chain ID to our network types
+    const getNetworkFromChain = (chainId?: number): 'mainnet' | 'sepolia' | 'celo' | 'celoAlfajores' | 'polygon' | 'polygonAmoy' => {
+        switch (chainId) {
+            case 1:
+                return 'mainnet';
+            case 11155111:
+                return 'sepolia';
+            case 42220:
+                return 'celo';
+            case 44787:
+                return 'celoAlfajores';
+            case 137:
+                return 'polygon';
+            case 80002:
+                return 'polygonAmoy';
+            default:
+                return 'mainnet'; // Default fallback
+        }
+    };
+
+    const network = getNetworkFromChain(chainId);
+
     // Callback function for the transaction data sidebar
     const handleTransactionDataSidebar = useCallback((data: string, show: boolean) => {
         setSidebarData(data);
