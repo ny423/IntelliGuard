@@ -1,56 +1,56 @@
-import { EtherscanAbiResponse, ContractInput } from '../types/contract';
+import { ContractInput } from '../types/contract';
 
 // Function to fetch contract source code from Et   herscan
-export const getContractSourceCode = async (address: string, network: string = 'sepolia') => {
-    // API key - in a production app, this should be in environment variables
-    const apiKey = 'U3K1NHZ7MSMBVP3MYFRDGH3BSCKT44FH4G';
+// export const getContractSourceCode = async (address: string, network: string = 'sepolia') => {
+//     // API key - in a production app, this should be in environment variables
+//     const apiKey = 'U3K1NHZ7MSMBVP3MYFRDGH3BSCKT44FH4G';
 
-    // Determine API URL based on network
-    let apiBaseUrl = 'https://api.etherscan.io';
-    if (network === 'sepolia') {
-        apiBaseUrl = 'https://api-sepolia.etherscan.io';
-    } else if (network === 'goerli') {
-        apiBaseUrl = 'https://api-goerli.etherscan.io';
-    }
+//     // Determine API URL based on network
+//     let apiBaseUrl = 'https://api.etherscan.io';
+//     if (network === 'sepolia') {
+//         apiBaseUrl = 'https://api-sepolia.etherscan.io';
+//     } else if (network === 'goerli') {
+//         apiBaseUrl = 'https://api-goerli.etherscan.io';
+//     }
 
-    const url = `${apiBaseUrl}/api?module=contract&action=getsourcecode&address=${address}&apikey=${apiKey}`;
+//     const url = `${apiBaseUrl}/api?module=contract&action=getsourcecode&address=${address}&apikey=${apiKey}`;
 
-    try {
-        const response = await fetch(url);
-        const data = await response.json() as EtherscanAbiResponse;
+//     try {
+//         const response = await fetch(url);
+//         const data = await response.json() as EtherscanAbiResponse;
 
-        if (data.status === '0') {
-            // Handle error cases like unverified contracts
-            return {
-                success: false,
-                contractAddress: address,
-                network,
-                result: {
-                    SourceCode: 'Contract not found/unverified',
-                },
-                isVerified: false,
-            };
-        }
+//         if (data.status === '0') {
+//             // Handle error cases like unverified contracts
+//             return {
+//                 success: false,
+//                 contractAddress: address,
+//                 network,
+//                 result: {
+//                     SourceCode: 'Contract not found/unverified',
+//                 },
+//                 isVerified: false,
+//             };
+//         }
 
-        return {
-            success: true,
-            contractAddress: address,
-            network,
-            result: data.result,
-            isVerified: true,
-        };
-    } catch (error) {
-        return {
-            success: false,
-            network,
-            contractAddress: address,
-            result: {
-                SourceCode: JSON.stringify(error),
-            },
-            isVerified: false,
-        };
-    }
-};
+//         return {
+//             success: true,
+//             contractAddress: address,
+//             network,
+//             result: data.result,
+//             isVerified: true,
+//         };
+//     } catch (error) {
+//         return {
+//             success: false,
+//             network,
+//             contractAddress: address,
+//             result: {
+//                 SourceCode: JSON.stringify(error),
+//             },
+//             isVerified: false,
+//         };
+//     }
+// };
 
 // Add validation utilities
 export const isValidAddress = (address: string): boolean => {

@@ -1,26 +1,26 @@
 'use client';
 
 import { useState, useEffect, JSX, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { useTransactionHook } from '../hooks/useTransactionHook';
 import { ContractFunction, EtherscanAbiItem } from '../types/contract';
-import { getContractSourceCode, validateInputs, prepareArgs } from '../utils/contractUtils';
+import { validateInputs, prepareArgs } from '../utils/contractUtils';
 import { showTransactionDataInSidebar, setTransactionDataSidebarCallback } from '../utils/windowUtils';
 import ContractExplorer from './ContractExplorer';
 import ContractInteractionForm from './ContractInteractionForm';
 import TransactionStatus from './TransactionStatus';
 import TransactionSidebar from './TransactionSidebar';
-
+import { getContractSourceCode } from '@/mastra/tools/contract';
 // Main Transaction Demo component
 export function TransactionDemo(): JSX.Element {
     const { isConnected } = useAccount();
+    const chainId = useChainId();
     const { status, error, hash, rawTransactionData, prepareTransaction, executeTransaction, resetState } = useTransactionHook();
     const [amount, setAmount] = useState<string>('0');
     const [contractAddress, setContractAddress] = useState<string>('');
     const [contractFunctions, setContractFunctions] = useState<ContractFunction[]>([]);
     const [contractError, setContractError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [network, setNetwork] = useState<'mainnet' | 'sepolia' | 'goerli'>('sepolia');
     const [selectedFunction, setSelectedFunction] = useState<ContractFunction | null>(null);
     const [inputValues, setInputValues] = useState<Record<string, string>>({});
     const [contractAbi, setContractAbi] = useState<EtherscanAbiItem[]>([]);
@@ -105,8 +105,9 @@ export function TransactionDemo(): JSX.Element {
         try {
             // Use the local implementation
             const result = await getContractSourceCode(contractAddress, network);
+            console.log("🚀 ~ fetchContractABI ~ result:", result);
 
-            if (!result.success || !result.isVerified) {
+            if (!result.success && !result.isVerified) {
                 setContractError(result.isVerified ? 'Error fetching contract data' : 'Contract is not verified');
                 setIsLoading(false);
                 return;
@@ -119,18 +120,40 @@ export function TransactionDemo(): JSX.Element {
                 if (Array.isArray(result.result)) {
                     // If result is an array, take the first item's ABI
                     const sourceCodeItem = result.result[0];
-                    if (sourceCodeItem && sourceCodeItem.ABI) {
-                        try {
-                            abiItems = JSON.parse(sourceCodeItem.ABI);
-                        } catch (e) {
-                            console.error('Error parsing ABI JSON:', e);
-                            setContractError('Invalid ABI format returned from Etherscan');
-                            setIsLoading(false);
-                            return;
+                    console.log("🚀 ~ fetchContractABI ~ sourceCodeItem:", sourceCodeItem)
+                    if (sourceCodeItem) {
+                        if (sourceCodeItem.ABI) {
+                            try {
+                                abiItems = JSON.parse(sourceCodeItem.ABI);
+                            } catch (e) {
+                                console.error('Error parsing ABI JSON:', e);
+                                setContractError('Invalid ABI format returned from Etherscan');
+                                setIsLoading(false);
+                                return;
+                            }
+                        }
+                        else if (sourceCodeItem.abi) {
+                            try {
+                                abiItems = JSON.parse(sourceCodeItem.abi);
+                            } catch (e) {
+                                console.error('Error parsing ABI JSON:', e);
+                                setContractError('Invalid ABI format returned from Etherscan');
+                                setIsLoading(false);
+                                return;
+                            }
                         }
                     }
                 }
-
+                // else if (result.result) {
+                //     try {
+                //         abiItems = JSON.parse(result.result);
+                //     } catch (e) {
+                //         console.error('Error parsing ABI JSON:', e);
+                //         setContractError('Invalid ABI format returned from Etherscan');
+                //         setIsLoading(false);
+                //         return;
+                //     }
+                // }
                 if (abiItems.length === 0) {
                     setContractError('No ABI found for this contract');
                     setIsLoading(false);
@@ -361,7 +384,7 @@ Original error: ${errorMessage}`;
     };
 
     return (
-        <div className="max-w-6xl mx-auto p-6 bg-gray-800 rounded-lg shadow-lg relative">
+        <div className="max-w-6xl p-6 bg-gray-800 rounded-lg shadow-lg relative">
             <h2 className="text-2xl font-bold text-white mb-6">Transaction Demo</h2>
 
             {isConnected ? (
@@ -370,7 +393,6 @@ Original error: ${errorMessage}`;
                     <div className="md:w-1/2">
                         <ContractExplorer
                             network={network}
-                            onNetworkChange={setNetwork}
                             contractAddress={contractAddress}
                             onAddressChange={setContractAddress}
                             isLoading={isLoading}
