@@ -43,12 +43,12 @@ export const contractAbiTool = createTool({
 });
 
 export const getContractSourceCode = async (address: string, network: string = 'sepolia') => {
-    let apiKey = process.env.ETHERSCAN_API_KEY;
+    let apiKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
     if (network === 'polygon' || network === 'polygonAmoy') {
-        apiKey = process.env.POLYGONSCAN_API_KEY;
+        apiKey = process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY;
     }
     else if (network === 'celo' || network === 'celoAlfajores') {
-        apiKey = process.env.CELOSCAN_API_KEY;
+        apiKey = process.env.NEXT_PUBLIC_CELOSCAN_API_KEY;
     }
 
     if (!apiKey) {

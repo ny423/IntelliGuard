@@ -25,10 +25,10 @@ module.exports = {
         }
     },
     etherscan: {
-        apiKey: process.env.POLYGONSCAN_API_KEY,
+        apiKey: process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY,
         apiKey: {
-            alfajores: process.env.CELOSCAN_API_KEY,
-            celo: process.env.CELOSCAN_API_KEY
+            alfajores: process.env.NEXT_PUBLIC_CELOSCAN_API_KEY,
+            celo: process.env.NEXT_PUBLIC_CELOSCAN_API_KEY
         },
         customChains: [
             {
