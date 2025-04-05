@@ -30,9 +30,14 @@ User-Side Dangers in a Single Transaction (with Penalty Scores)
 });
 
 // Create the recommender agent
-const contractRecommenderAgent = new Agent({
-    name: "ContractRecommender",
-    instructions: "You are an expert smart contract security advisor. Provide actionable recommendations based on contract analysis.",
+const transactionSuggestionsAgent = new Agent({
+    name: "TransactionSuggestions",
+    instructions: `
+You are an expert smart contract security advisor. Provide actionable recommendations based on contract analysis.
+Please provide:
+1. Specific recommendations to address each security issue
+2. Prioritized list of actions (High/Medium/Low priority)
+3. A brief summary of the contract's overall security posture`,
     model: xai("grok-2-1212"),
 });
 
@@ -153,8 +158,7 @@ const recommendationStep = new Step({
         const analysisResult = context.getStepResult(analyzeContractStep);
         const contractResult = context.getStepResult(getContractStep);
 
-        const recommendationPrompt = `Based on the following contract analysis, provide specific recommendations to improve the contract's security and functionality.
-    
+        const recommendationPrompt = `
 Contract Address: ${contractResult.contractAddress}
 Network: ${contractResult.network}
 Security Score: ${analysisResult.score}/100
@@ -171,45 +175,41 @@ ${analysisResult.stateChanges.map(change => `- ${change}`).join('\n')}
 Please provide:
 1. Specific recommendations to address each security issue
 2. Prioritized list of actions (High/Medium/Low priority)
-3. A brief summary of the contract's overall security posture`;
+3. A brief summary of the contract's overall security posture
+`;
 
-        const recommendationResult = await contractRecommenderAgent.generate(recommendationPrompt);
+        const recommendationResult = await transactionSuggestionsAgent.generate(recommendationPrompt);
 
         try {
             const text = recommendationResult.text;
 
-            // Extract recommendations
-            let recommendations: string[] = [];
-            const recommendationsMatch = text.match(/Recommendations:([\s\S]*?)(?=Prioritized Actions:|$)/);
-            if (recommendationsMatch && recommendationsMatch[1]) {
-                recommendations = recommendationsMatch[1]
-                    .split(/\d+\./)
-                    .filter(Boolean)
-                    .map(rec => rec.trim());
-            }
+            // // Extract recommendations
+            // let recommendations: string[] = [];
+            // const recommendationsMatch = text.match(/Recommendations:([\s\S]*?)(?=Prioritized Actions:|$)/);
+            // if (recommendationsMatch && recommendationsMatch[1]) {
+            //     recommendations = recommendationsMatch[1]
+            //         .split(/\d+\./)
+            //         .filter(Boolean)
+            //         .map(rec => rec.trim());
+            // }
 
-            // Extract prioritized actions
-            let prioritizedActions: string[] = [];
-            const prioritizedActionsMatch = text.match(/Prioritized Actions:([\s\S]*?)(?=Summary:|$)/);
-            if (prioritizedActionsMatch && prioritizedActionsMatch[1]) {
-                prioritizedActions = prioritizedActionsMatch[1]
-                    .split('-')
-                    .filter(Boolean)
-                    .map(action => action.trim());
-            }
+            // // Extract prioritized actions
+            // let prioritizedActions: string[] = [];
+            // const prioritizedActionsMatch = text.match(/Prioritized Actions:([\s\S]*?)(?=Summary:|$)/);
+            // if (prioritizedActionsMatch && prioritizedActionsMatch[1]) {
+            //     prioritizedActions = prioritizedActionsMatch[1]
+            //         .split('-')
+            //         .filter(Boolean)
+            //         .map(action => action.trim());
+            // }
 
-            // Extract summary
-            let summary = text;
-            const summaryMatch = text.match(/Summary:([\s\S]*?)$/);
-            if (summaryMatch && summaryMatch[1]) {
-                summary = summaryMatch[1].trim();
-            }
-
-            return {
-                recommendations,
-                prioritizedActions,
-                summary,
-            };
+            // // Extract summary
+            // let summary = text;
+            // const summaryMatch = text.match(/Summary:([\s\S]*?)$/);
+            // if (summaryMatch && summaryMatch[1]) {
+            //     summary = summaryMatch[1].trim();
+            // }
+            return JSON.parse(text);
         } catch (err) {
             // Fallback if parsing fails
             console.error('Error parsing recommendations:', err);

@@ -124,7 +124,7 @@ const TransactionSidebar: React.FC<TransactionSidebarProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed left-0 top-0 h-full w-96 bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto">
+        <div className="fixed left-0 top-0 h-full w-1/3 bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto">
             <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center p-4 border-b border-gray-700">
                     <h2 className="text-xl text-white font-semibold">Transaction Analysis</h2>
