@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { z } from "zod";
 import { Step, Workflow } from "@mastra/core/workflows";
 import { getContractSourceCode } from "../tools/contract";
@@ -221,49 +220,3 @@ Please provide:
 
 // Chain the steps and commit the workflow
 multiAgentWorkflow.step(getContractStep).then(analyzeContractStep).then(recommendationStep).commit();
-
-// // Replace the mock execute implementation with a real one
-// (multiAgentWorkflow as any).execute = async (triggerData: WorkflowTriggerData): Promise<WorkflowExecutionResult> => {
-//     // Store results from each step execution
-//     const stepResults = new Map<string, any>();
-
-//     // Create a proper context object with all required properties
-//     const createContext = (existingResults: Map<string, any>) => {
-//         return {
-//             triggerData,
-//             steps: [getContractStep, analyzeContractStep, recommendationStep],
-//             inputData: {},
-//             attempts: 0,
-//             getStepResult: (stepId: string) => existingResults.get(stepId)
-//         };
-//     };
-
-//     // Execute getContractStep
-//     const contractResult = await getContractStep.execute({
-//         context: createContext(stepResults)
-//     });
-//     stepResults.set(getContractStep.id, contractResult);
-
-//     // Execute analyzeContractStep
-//     const analysisResult = await analyzeContractStep.execute({
-//         context: createContext(stepResults)
-//     });
-//     stepResults.set(analyzeContractStep.id, analysisResult);
-
-//     // Execute recommendationStep
-//     const recommendationResult = await recommendationStep.execute({
-//         context: createContext(stepResults)
-//     });
-//     stepResults.set(recommendationStep.id, recommendationResult);
-
-//     // Return a WorkflowExecutionResult with access to all step results
-//     return {
-//         getStepResult: async (stepId: string) => {
-//             const result = stepResults.get(stepId);
-//             if (!result) {
-//                 throw new Error(`No result found for step: ${stepId}`);
-//             }
-//             return result;
-//         }
-//     };
-// };

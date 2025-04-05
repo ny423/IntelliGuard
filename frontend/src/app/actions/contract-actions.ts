@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// @ts-expect-error - Workflow execution results type checking
 'use server';
 
 import { multiAgentWorkflow } from '@/mastra/workflow/multi-agent-workflow';
@@ -45,51 +45,34 @@ export async function analyzeTransaction(params: TransactionAnalysisParams): Pro
         console.log(`[ANALYSIS] Executing workflow...`);
         debugLogs.push('Executing multi-agent workflow...');
 
-        const execution = await (multiAgentWorkflow as any).execute({
-            address: params.address,
-            network: params.network,
-            transactionData: params.transactionData,
+        const { start, watch } = multiAgentWorkflow.createRun();
+
+        const unsubscribe = watch(({ activePaths }) => {
+            // console.log(`[ANALYSIS] Workflow result context: `, context);
+            debugLogs.push(`[ANALYSIS] Workflow stepId: ${activePaths[0].stepId}`);
         });
-
-        console.log(`[ANALYSIS] Workflow started, fetching contract source code...`);
-        debugLogs.push('Workflow started, fetching contract source code...');
-
-        // Wait for all steps to complete
-        console.log(`[ANALYSIS] Waiting for getContractStep to complete...`);
-        const contractResult = await execution.getStepResult('getContractStep');
-        console.log(`[ANALYSIS] Contract source code fetched. Verified: ${contractResult.isVerified}`);
-        debugLogs.push(`Contract source code fetched. Verified: ${contractResult.isVerified}`);
-
-        console.log(`[ANALYSIS] Waiting for analyzeContractStep to complete...`);
-        debugLogs.push('Analyzing contract for security issues...');
-        const analysisResult = await execution.getStepResult('analyzeContractStep');
-        console.log(`[ANALYSIS] Contract analyzed. Found ${analysisResult.securityIssues.length} issues. Score: ${analysisResult.score}`);
-        debugLogs.push(`Contract analyzed. Found ${analysisResult.securityIssues.length} security issues. Score: ${analysisResult.score}`);
-
-        console.log(`[ANALYSIS] Waiting for recommendationStep to complete...`);
-        debugLogs.push('Generating security recommendations...');
-        const recommendationResult = await execution.getStepResult('recommendationStep');
-        console.log(`[ANALYSIS] Recommendations generated. ${recommendationResult.recommendations.length} recommendations provided.`);
-        debugLogs.push(`Recommendations generated. ${recommendationResult.recommendations.length} recommendations provided.`);
-
-        debugLogs.push(`Analysis completed successfully at ${new Date().toISOString()}`);
-
+        const execution = await start({ triggerData: params, });
+        unsubscribe();
         // Return the complete analysis results
+        const contractResult = execution.results;
+        for (const result of Object.values(contractResult)) {
+            console.log(`[ANALYSIS] Contract result: `, result);
+        }
         return {
             success: true,
             contract: {
-                address: contractResult.contractAddress,
-                isVerified: contractResult.isVerified,
+                address: contractResult.getContractStep.output.contractAddress,
+                isVerified: contractResult.getContractStep.output.isVerified,
             },
             analysis: {
-                securityIssues: analysisResult.securityIssues,
-                stateChanges: analysisResult.stateChanges,
-                score: analysisResult.score,
+                securityIssues: contractResult.analyzeContractStep.output.securityIssues,
+                stateChanges: contractResult.analyzeContractStep.output.stateChanges,
+                score: contractResult.analyzeContractStep.output.score,
             },
             recommendations: {
-                recommendations: recommendationResult.recommendations,
-                prioritizedActions: recommendationResult.prioritizedActions,
-                summary: recommendationResult.summary,
+                recommendations: contractResult.recommendationStep.output.recommendations,
+                prioritizedActions: contractResult.recommendationStep.output.prioritizedActions,
+                summary: contractResult.recommendationStep.output.summary,
             },
             debugLogs
         };
