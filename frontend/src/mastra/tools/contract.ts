@@ -1,5 +1,8 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // EtherscanABI Response Interface
 interface EtherscanAbiResponse {
