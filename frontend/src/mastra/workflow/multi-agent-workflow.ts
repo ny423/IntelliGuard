@@ -5,17 +5,17 @@ import { getContractSourceCode } from "../tools/contract";
 import { Agent } from "@mastra/core/agent";
 import { xai } from "@ai-sdk/xai";
 
-// Define the interface for workflow execution response
-interface WorkflowExecutionResult {
-    getStepResult: (stepId: string) => Promise<Record<string, any>>;
-}
+// // Define the interface for workflow execution response
+// interface WorkflowExecutionResult {
+//     getStepResult: (stepId: string) => Promise<Record<string, any>>;
+// }
 
-// Define the interface for the workflow trigger data
-interface WorkflowTriggerData {
-    address: string;
-    network: string;
-    transactionData: string;
-}
+// // Define the interface for the workflow trigger data
+// interface WorkflowTriggerData {
+//     address: string;
+//     network: string;
+//     transactionData: string;
+// }
 
 // Create the analyzer agent
 const contractAnalyzerAgent = new Agent({
@@ -222,48 +222,48 @@ Please provide:
 // Chain the steps and commit the workflow
 multiAgentWorkflow.step(getContractStep).then(analyzeContractStep).then(recommendationStep).commit();
 
-// Replace the mock execute implementation with a real one
-(multiAgentWorkflow as any).execute = async (triggerData: WorkflowTriggerData): Promise<WorkflowExecutionResult> => {
-    // Store results from each step execution
-    const stepResults = new Map<string, any>();
+// // Replace the mock execute implementation with a real one
+// (multiAgentWorkflow as any).execute = async (triggerData: WorkflowTriggerData): Promise<WorkflowExecutionResult> => {
+//     // Store results from each step execution
+//     const stepResults = new Map<string, any>();
 
-    // Create a proper context object with all required properties
-    const createContext = (existingResults: Map<string, any>) => {
-        return {
-            triggerData,
-            steps: [getContractStep, analyzeContractStep, recommendationStep],
-            inputData: {},
-            attempts: 0,
-            getStepResult: (stepId: string) => existingResults.get(stepId)
-        };
-    };
+//     // Create a proper context object with all required properties
+//     const createContext = (existingResults: Map<string, any>) => {
+//         return {
+//             triggerData,
+//             steps: [getContractStep, analyzeContractStep, recommendationStep],
+//             inputData: {},
+//             attempts: 0,
+//             getStepResult: (stepId: string) => existingResults.get(stepId)
+//         };
+//     };
 
-    // Execute getContractStep
-    const contractResult = await getContractStep.execute({
-        context: createContext(stepResults)
-    });
-    stepResults.set(getContractStep.id, contractResult);
+//     // Execute getContractStep
+//     const contractResult = await getContractStep.execute({
+//         context: createContext(stepResults)
+//     });
+//     stepResults.set(getContractStep.id, contractResult);
 
-    // Execute analyzeContractStep
-    const analysisResult = await analyzeContractStep.execute({
-        context: createContext(stepResults)
-    });
-    stepResults.set(analyzeContractStep.id, analysisResult);
+//     // Execute analyzeContractStep
+//     const analysisResult = await analyzeContractStep.execute({
+//         context: createContext(stepResults)
+//     });
+//     stepResults.set(analyzeContractStep.id, analysisResult);
 
-    // Execute recommendationStep
-    const recommendationResult = await recommendationStep.execute({
-        context: createContext(stepResults)
-    });
-    stepResults.set(recommendationStep.id, recommendationResult);
+//     // Execute recommendationStep
+//     const recommendationResult = await recommendationStep.execute({
+//         context: createContext(stepResults)
+//     });
+//     stepResults.set(recommendationStep.id, recommendationResult);
 
-    // Return a WorkflowExecutionResult with access to all step results
-    return {
-        getStepResult: async (stepId: string) => {
-            const result = stepResults.get(stepId);
-            if (!result) {
-                throw new Error(`No result found for step: ${stepId}`);
-            }
-            return result;
-        }
-    };
-};
+//     // Return a WorkflowExecutionResult with access to all step results
+//     return {
+//         getStepResult: async (stepId: string) => {
+//             const result = stepResults.get(stepId);
+//             if (!result) {
+//                 throw new Error(`No result found for step: ${stepId}`);
+//             }
+//             return result;
+//         }
+//     };
+// };
