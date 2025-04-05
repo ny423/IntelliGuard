@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { mainnet, sepolia } from 'wagmi/chains';
+import { mainnet, sepolia, celo, celoAlfajores, polygon, polygonAmoy } from 'wagmi/chains';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { getDefaultWallets } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
@@ -19,10 +19,14 @@ const { connectors } = getDefaultWallets({
 
 // Create wagmi config
 const config = createConfig({
-    chains: [mainnet, sepolia],
+    chains: [mainnet, sepolia, celo, celoAlfajores, polygon, polygonAmoy],
     transports: {
         [mainnet.id]: http(),
         [sepolia.id]: http(),
+        [celo.id]: http(),
+        [celoAlfajores.id]: http(),
+        [polygon.id]: http(),
+        [polygonAmoy.id]: http(),
     },
     connectors
 });
