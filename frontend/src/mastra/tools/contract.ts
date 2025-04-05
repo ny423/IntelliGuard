@@ -22,13 +22,6 @@ interface EtherscanAbiResponse {
     }[];
 }
 
-interface CeloscanAbiResponse {
-    message: string;
-    source_code: string;
-    abi: string;
-    implementations: { address: string }[];
-}
-
 export const contractAbiTool = createTool({
     id: 'get-contract-abi',
     description: 'Fetch the ABI for an Ethereum smart contract',
@@ -50,134 +43,145 @@ export const contractAbiTool = createTool({
 });
 
 export const getContractSourceCode = async (address: string, network: string = 'sepolia') => {
-    if (network === 'mainnet' || network === 'sepolia' || network === 'polygon' || network === 'polygonAmoy') {
-        // API key - in a production app, this should be in environment variables
-        let apiKey = 'U3K1NHZ7MSMBVP3MYFRDGH3BSCKT44FH4G';
-        if (network === 'polygon' || network === 'polygonAmoy') {
-            apiKey = '6KING2KSXRWA76KDM2YD3QTR2NCKQGHZYE';
-        }
-
-        // Determine API URL based on network
-        let apiBaseUrl = 'https://api.etherscan.io';
-        if (network === 'sepolia') {
-            apiBaseUrl = 'https://api-sepolia.etherscan.io';
-        }
-        else if (network === 'polygon') {
-            apiBaseUrl = 'https://api.polygonscan.com';
-        }
-        else if (network === 'polygonAmoy') {
-            apiBaseUrl = 'https://api-amoy.polygonscan.com';
-        }
-
-        const url = `${apiBaseUrl}/api?module=contract&action=getsourcecode&address=${address}&apikey=${apiKey}`;
-
-        try {
-            const response = await fetch(url);
-            const data = await response.json() as EtherscanAbiResponse;
-            console.log("🚀 ~ getContractSourceCode ~ data:", data);
-            if (data.status === '0') {
-                // Handle error cases like unverified contracts
-                return {
-                    success: false,
-                    contractAddress: address,
-                    network,
-                    SourceCode: 'Contract not found/unverified',
-                    abi: '',
-                    isVerified: false,
-                };
-            }
-
-            return {
-                success: true,
-                contractAddress: address,
-                network,
-                SourceCode: data.result[0].SourceCode,
-                abi: data.result[0].ABI,
-                isVerified: true,
-            };
-        } catch (error) {
-            console.error('Error fetching contract source code:', error);
-            return {
-                success: false,
-                network,
-                contractAddress: address,
-                SourceCode: JSON.stringify(error),
-                abi: '',
-                isVerified: false,
-            };
-        }
+    let apiKey = process.env.ETHERSCAN_API_KEY;
+    if (network === 'polygon' || network === 'polygonAmoy') {
+        apiKey = process.env.POLYGONSCAN_API_KEY;
     }
     else if (network === 'celo' || network === 'celoAlfajores') {
-        // Determine API URL based on network
-        let apiBaseUrl = 'https://celo.blockscout.com';
-        if (network === 'celoAlfajores') {
-            apiBaseUrl = 'https://celo-alfajores.blockscout.com';
-        }
+        apiKey = process.env.CELOSCAN_API_KEY;
+    }
 
-        const url = `${apiBaseUrl}/api/v2/smart-contracts/${address}`;
+    if (!apiKey) {
+        throw new Error(`API key not found for network: ${network}`);
+    }
 
-        try {
-            const response = await fetch(url);
-            const data = await response.json() as CeloscanAbiResponse;
-            console.log("🚀 ~ getContractSourceCode ~ celo data:", data)
-            if (!!data.source_code && data.source_code.length > 0) {
-                return {
-                    success: true,
-                    contractAddress: address,
-                    network,
-                    SourceCode: data.source_code,
-                    abi: data.abi,
-                    isVerified: true,
-                };
-            }
-            else if (data.implementations.length > 0) {
-                const response = await fetch(`${apiBaseUrl}/api/v2/smart-contracts/${data.implementations[0].address}`);
-                const refetchedData = await response.json() as CeloscanAbiResponse;
+    // Determine API URL based on network
+    let apiBaseUrl = 'https://api.etherscan.io';
+    if (network === 'sepolia') {
+        apiBaseUrl = 'https://api-sepolia.etherscan.io';
+    }
+    else if (network === 'polygon') {
+        apiBaseUrl = 'https://api.polygonscan.com';
+    }
+    else if (network === 'polygonAmoy') {
+        apiBaseUrl = 'https://api-amoy.polygonscan.com';
+    }
+    else if (network === 'celo') {
+        apiBaseUrl = 'https://api.celoscan.io';
+    }
+    else if (network === 'celoAlfajores') {
+        apiBaseUrl = 'https://api-alfajores.celoscan.io';
+    }
 
-                if (!!refetchedData.source_code && refetchedData.source_code.length > 0) {
-                    return {
-                        success: true,
-                        contractAddress: address,
-                        network,
-                        SourceCode: refetchedData.source_code,
-                        abi: refetchedData.abi,
-                        isVerified: true,
-                    };
-                }
-                else {
-                    return {
-                        success: false,
-                        contractAddress: address,
-                        network,
-                        SourceCode: 'Contract not found/unverified',
-                        abi: '',
-                        isVerified: false,
-                    };
-                }
-            }
-            else {
-                return {
-                    success: true,
-                    contractAddress: address,
-                    network,
-                    SourceCode: data.source_code,
-                    abi: data.abi,
-                    isVerified: true,
-                };
-            }
-        } catch (error) {
-            console.error('Error fetching contract source code:', error);
+    const url = `${apiBaseUrl}/api?module=contract&action=getsourcecode&address=${address}&apikey=${apiKey}`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json() as EtherscanAbiResponse;
+        console.log("🚀 ~ getContractSourceCode ~ data:", data);
+        if (data.status === '0') {
+            // Handle error cases like unverified contracts
             return {
                 success: false,
-                network,
                 contractAddress: address,
-                SourceCode: JSON.stringify(error),
+                network,
+                SourceCode: 'Contract not found/unverified',
                 abi: '',
                 isVerified: false,
             };
         }
+
+        return {
+            success: true,
+            contractAddress: address,
+            network,
+            SourceCode: data.result[0].SourceCode,
+            abi: data.result[0].ABI,
+            isVerified: true,
+        };
+    } catch (error) {
+        console.error('Error fetching contract source code:', error);
+        return {
+            success: false,
+            network,
+            contractAddress: address,
+            SourceCode: JSON.stringify(error),
+            abi: '',
+            isVerified: false,
+        };
     }
-    else {
-        throw new Error('Unsupported network');
-    }
+    // }
+    // else if (network === 'celo' || network === 'celoAlfajores') {
+    //     // Determine API URL based on network
+    //     let apiBaseUrl = 'https://celo.blockscout.com';
+    //     if (network === 'celoAlfajores') {
+    //         apiBaseUrl = 'https://celo-alfajores.blockscout.com';
+    //     }
+
+    //     const url = `${apiBaseUrl}/api/v2/smart-contracts/${address}`;
+
+    //     try {
+    //         const response = await fetch(url);
+    //         const data = await response.json() as CeloscanAbiResponse;
+    //         console.log("🚀 ~ getContractSourceCode ~ celo data:", data)
+    //         if (!!data.source_code && data.source_code.length > 0) {
+    //             return {
+    //                 success: true,
+    //                 contractAddress: address,
+    //                 network,
+    //                 SourceCode: data.source_code,
+    //                 abi: data.abi,
+    //                 isVerified: true,
+    //             };
+    //         }
+    //         else if (data.implementations.length > 0) {
+    //             const response = await fetch(`${apiBaseUrl}/api/v2/smart-contracts/${data.implementations[0].address}`);
+    //             const refetchedData = await response.json() as CeloscanAbiResponse;
+
+    //             if (!!refetchedData.source_code && refetchedData.source_code.length > 0) {
+    //                 return {
+    //                     success: true,
+    //                     contractAddress: address,
+    //                     network,
+    //                     SourceCode: refetchedData.source_code,
+    //                     abi: refetchedData.abi,
+    //                     isVerified: true,
+    //                 };
+    //             }
+    //             else {
+    //                 return {
+    //                     success: false,
+    //                     contractAddress: address,
+    //                     network,
+    //                     SourceCode: 'Contract not found/unverified',
+    //                     abi: '',
+    //                     isVerified: false,
+    //                 };
+    //             }
+    //         }
+    //         else {
+    //             return {
+    //                 success: true,
+    //                 contractAddress: address,
+    //                 network,
+    //                 SourceCode: data.source_code,
+    //                 abi: data.abi,
+    //                 isVerified: true,
+    //             };
+    //         }
+    //     } catch (error) {
+    //         console.error('Error fetching contract source code:', error);
+    //         return {
+    //             success: false,
+    //             network,
+    //             contractAddress: address,
+    //             SourceCode: JSON.stringify(error),
+    //             abi: '',
+    //             isVerified: false,
+    //         };
+    //     }
+    // }
+    // else {
+    //     throw new Error('Unsupported network');
+    // }
 }; 

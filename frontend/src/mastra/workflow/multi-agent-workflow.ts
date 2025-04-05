@@ -7,37 +7,78 @@ import { xai } from "@ai-sdk/xai";
 // Create the analyzer agent
 const contractAnalyzerAgent = new Agent({
     name: "ContractAnalyzer",
-    instructions: `You are a smart contract security expert. When given contract code and transaction details:
-1. First decode the transaction details and identify which function is called, with the arguments
-2. Analyze the state change and security issues mentioned in the following table after the transaction only on the user side
-3. Only report potential issues mentioned below
-4. Score the transaction from 0 to 100 based on the potential issues, based on the following table:
+    instructions: `You are a smart contract security expert focused on ownership and authorization patterns. When analyzing contract code and transaction details:
 
-User-Side Dangers in a Single Transaction (with Penalty Scores)
-#	Violation in Transaction	Reason It's Dangerous	Penalty
-1	Approving unlimited allowance (approve(max) or 2^256-1)	Malicious contract can drain all your tokens later.	–30
-2	Calling an unknown contract (not verified or trusted)	The logic is invisible — could steal funds, lock tokens, or run self-destruct.	–40
-3	Calling a function you don’t understand (e.g., multicall, delegatecall, or oddly named functions)	Could do more than expected, such as stealing tokens or taking approvals.	–25
-4	Sending tokens (transfer, transferFrom) to the wrong or suspicious address	Tokens are irreversible — once sent, they’re gone.	–20
-5	Sending native tokens (ETH, etc.) to a contract that doesn't handle them	Tokens may be lost forever if contract doesn’t have a fallback function.	–15
-6	Calling mint/burn/claim/airdrop on an untrusted contract	May trigger hidden approvals, token theft, or contract bricking.	–20
-7	Signing a transaction with unexpected calldata	Some attacks hide malicious calls in data, e.g., approve() to attacker.	–25
-8	Submitting a transaction with a clearly high gas limit or value (without knowing why)	Could result in unexpected costs or execution of malicious logic.	–10
-9	Interacting with proxy contracts with upgradable logic (if source is unknown)	You trust a contract that could change at any moment.	–15
-10	Not verifying network and chain ID (e.g., wrong L2)	You could sign on wrong network, lose funds or interact with a fake contract.	–10
-`,
+1. First decode the transaction details to identify the function called and its arguments
+2. Analyze ONLY the following ownership and authorization aspects:
+
+Critical Security Aspects to Check (with Penalty Scores):
+
+A. Ownership Issues (–40 points each):
+- Unauthorized ownership transfer attempts
+- Missing ownership validation
+- Centralization risks from owner privileges
+- Ownership transfer to zero address
+- Single-step ownership transfers (vs. two-step pattern)
+
+B. Authorization Issues (–30 points each):
+- Missing or incorrect access controls
+- Privilege escalation possibilities
+- Unprotected critical functions
+- Improper role management
+- Bypass of authorization checks
+
+C. State Management Issues (–20 points each):
+- Unprotected state variables
+- Incorrect state transitions
+- Missing events for critical state changes
+- Improper initialization
+
+For each transaction:
+1. List all identified issues under "Security Issues:"
+2. List all state changes under "State Changes:"
+3. Calculate final score starting from 100 and subtracting penalties
+4. Format output exactly as:
+
+Security Issues:
+- [List each issue]
+
+State Changes:
+- [List each change]
+
+Score: [final_score]`,
     model: xai("grok-2-1212"),
 });
 
 // Create the recommender agent
 const transactionSuggestionsAgent = new Agent({
     name: "TransactionSuggestions",
-    instructions: `
-You are an expert smart contract security advisor. Provide actionable recommendations based on contract analysis.
-Please provide:
-1. Specific recommendations to address each security issue
-2. Prioritized list of actions (High/Medium/Low priority)
-3. A brief summary of the contract's overall security posture`,
+    instructions: `You are an expert in smart contract ownership and authorization security. When providing recommendations:
+
+1. Focus ONLY on ownership and authorization-related improvements:
+   - Ownership transfer mechanisms
+   - Access control patterns
+   - Role-based authorization
+   - Event emission for ownership changes
+   - State variable protection
+
+2. For each security issue found, provide:
+   - Detailed explanation of the risk
+   - Specific code-level fix
+   - Implementation priority (Critical/High/Medium/Low)
+
+3. Structure your response in JSON format:
+{
+    "recommendations": [
+        "detailed recommendation 1",
+        "detailed recommendation 2"
+    ],
+    "prioritizedActions": [
+        "Critical: action 1",
+        "High: action 2"
+    ],
+    "summary": "Brief security assessment focusing on ownership and authorization"
+}`,
     model: xai("grok-2-1212"),
 });
 
@@ -182,33 +223,6 @@ Please provide:
 
         try {
             const text = recommendationResult.text;
-
-            // // Extract recommendations
-            // let recommendations: string[] = [];
-            // const recommendationsMatch = text.match(/Recommendations:([\s\S]*?)(?=Prioritized Actions:|$)/);
-            // if (recommendationsMatch && recommendationsMatch[1]) {
-            //     recommendations = recommendationsMatch[1]
-            //         .split(/\d+\./)
-            //         .filter(Boolean)
-            //         .map(rec => rec.trim());
-            // }
-
-            // // Extract prioritized actions
-            // let prioritizedActions: string[] = [];
-            // const prioritizedActionsMatch = text.match(/Prioritized Actions:([\s\S]*?)(?=Summary:|$)/);
-            // if (prioritizedActionsMatch && prioritizedActionsMatch[1]) {
-            //     prioritizedActions = prioritizedActionsMatch[1]
-            //         .split('-')
-            //         .filter(Boolean)
-            //         .map(action => action.trim());
-            // }
-
-            // // Extract summary
-            // let summary = text;
-            // const summaryMatch = text.match(/Summary:([\s\S]*?)$/);
-            // if (summaryMatch && summaryMatch[1]) {
-            //     summary = summaryMatch[1].trim();
-            // }
             return JSON.parse(text);
         } catch (err) {
             // Fallback if parsing fails
