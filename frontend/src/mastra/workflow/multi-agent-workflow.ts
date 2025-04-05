@@ -55,9 +55,8 @@ const getContractStep = new Step({
         success: z.boolean(),
         contractAddress: z.string(),
         network: z.string(),
-        result: z.object({
-            SourceCode: z.string(),
-        }),
+        SourceCode: z.string(),
+        abi: z.string(),
         isVerified: z.boolean(),
     }),
     execute: async ({ context }) => {
@@ -79,15 +78,15 @@ const analyzeContractStep = new Step({
         if (!result.success) {
             return {
                 analysis: "Failed to analyze contract",
-                securityIssues: [`Failed to get contract source code: ${result.result}`],
+                securityIssues: [`Failed to get contract source code: ${result.SourceCode}`],
                 stateChanges: [],
                 score: 0,
             };
         }
-        console.log(`result.result.SourceCode: ${JSON.stringify(result.result.SourceCode)}`);
+        console.log(`result.SourceCode: ${JSON.stringify(result.SourceCode)}`);
         const analysisPrompt = `
 Contract Code:
-${JSON.stringify(result.result.SourceCode)}
+${JSON.stringify(result.SourceCode)}
 
 Transaction Details:
 ${context.triggerData.transactionData}

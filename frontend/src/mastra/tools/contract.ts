@@ -5,7 +5,21 @@ import { z } from 'zod';
 interface EtherscanAbiResponse {
     status: string;
     message: string;
-    result: string;
+    result: {
+        SourceCode: string;
+        ABI: string;
+        ContractName: string;
+        CompilerVersion: string;
+        OptimizationUsed: string;
+        Runs: string;
+        ConstructorArguments: string;
+        EVMVersion: string;
+        Library: string;
+        LicenseType: string;
+        Proxy: string;
+        Implementation: string;
+        SwarmSource: string;
+    }[];
 }
 
 interface CeloscanAbiResponse {
@@ -26,10 +40,8 @@ export const contractAbiTool = createTool({
         success: z.boolean(),
         contractAddress: z.string(),
         network: z.string(),
-        result: z.object({
-            SourceCode: z.string(),
-
-        }),
+        SourceCode: z.string(),
+        abi: z.string(),
         isVerified: z.boolean(),
     }),
     execute: async ({ context }) => {
@@ -62,17 +74,15 @@ export const getContractSourceCode = async (address: string, network: string = '
         try {
             const response = await fetch(url);
             const data = await response.json() as EtherscanAbiResponse;
-            console.log("🚀 ~ getContractSourceCode ~ data:", data)
-
+            console.log("🚀 ~ getContractSourceCode ~ data:", data);
             if (data.status === '0') {
                 // Handle error cases like unverified contracts
                 return {
                     success: false,
                     contractAddress: address,
                     network,
-                    result: {
-                        SourceCode: 'Contract not found/unverified',
-                    },
+                    SourceCode: 'Contract not found/unverified',
+                    abi: '',
                     isVerified: false,
                 };
             }
@@ -81,7 +91,8 @@ export const getContractSourceCode = async (address: string, network: string = '
                 success: true,
                 contractAddress: address,
                 network,
-                result: data.result,
+                SourceCode: data.result[0].SourceCode,
+                abi: data.result[0].ABI,
                 isVerified: true,
             };
         } catch (error) {
@@ -90,15 +101,13 @@ export const getContractSourceCode = async (address: string, network: string = '
                 success: false,
                 network,
                 contractAddress: address,
-                result: {
-                    SourceCode: JSON.stringify(error),
-                },
+                SourceCode: JSON.stringify(error),
+                abi: '',
                 isVerified: false,
             };
         }
     }
     else if (network === 'celo' || network === 'celoAlfajores') {
-
         // Determine API URL based on network
         let apiBaseUrl = 'https://celo.blockscout.com';
         if (network === 'celoAlfajores') {
@@ -112,15 +121,12 @@ export const getContractSourceCode = async (address: string, network: string = '
             const data = await response.json() as CeloscanAbiResponse;
             console.log("🚀 ~ getContractSourceCode ~ celo data:", data)
             if (!!data.source_code && data.source_code.length > 0) {
-                // Handle error cases like unverified contracts
                 return {
                     success: true,
                     contractAddress: address,
                     network,
-                    result: {
-                        SourceCode: data.source_code,
-                        abi: data.abi,
-                    },
+                    SourceCode: data.source_code,
+                    abi: data.abi,
                     isVerified: true,
                 };
             }
@@ -133,9 +139,8 @@ export const getContractSourceCode = async (address: string, network: string = '
                         success: true,
                         contractAddress: address,
                         network,
-                        result: {
-                            SourceCode: refetchedData.source_code,
-                        },
+                        SourceCode: refetchedData.source_code,
+                        abi: refetchedData.abi,
                         isVerified: true,
                     };
                 }
@@ -144,9 +149,8 @@ export const getContractSourceCode = async (address: string, network: string = '
                         success: false,
                         contractAddress: address,
                         network,
-                        result: {
-                            SourceCode: 'Contract not found/unverified',
-                        },
+                        SourceCode: 'Contract not found/unverified',
+                        abi: '',
                         isVerified: false,
                     };
                 }
@@ -156,10 +160,8 @@ export const getContractSourceCode = async (address: string, network: string = '
                     success: true,
                     contractAddress: address,
                     network,
-                    result: {
-                        SourceCode: data.source_code,
-                        abi: data.abi,
-                    },
+                    SourceCode: data.source_code,
+                    abi: data.abi,
                     isVerified: true,
                 };
             }
@@ -169,9 +171,8 @@ export const getContractSourceCode = async (address: string, network: string = '
                 success: false,
                 network,
                 contractAddress: address,
-                result: {
-                    SourceCode: JSON.stringify(error),
-                },
+                SourceCode: JSON.stringify(error),
+                abi: '',
                 isVerified: false,
             };
         }

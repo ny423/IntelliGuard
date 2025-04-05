@@ -3,7 +3,7 @@
 import { useState, useEffect, JSX, useCallback } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { useTransactionHook } from '../hooks/useTransactionHook';
-import { ContractFunction, EtherscanAbiItem } from '../types/contract';
+import { ContractFunction, convertCeloscanToEtherscanAbi, EtherscanAbiItem } from '../types/contract';
 import { validateInputs, prepareArgs } from '../utils/contractUtils';
 import { showTransactionDataInSidebar, setTransactionDataSidebarCallback } from '../utils/windowUtils';
 import ContractExplorer from './ContractExplorer';
@@ -117,43 +117,25 @@ export function TransactionDemo(): JSX.Element {
                 let abiItems: EtherscanAbiItem[] = [];
 
                 // Handle different response formats from Etherscan
-                if (Array.isArray(result.result)) {
-                    // If result is an array, take the first item's ABI
-                    const sourceCodeItem = result.result[0];
-                    console.log("🚀 ~ fetchContractABI ~ sourceCodeItem:", sourceCodeItem)
-                    if (sourceCodeItem) {
-                        if (sourceCodeItem.ABI) {
-                            try {
-                                abiItems = JSON.parse(sourceCodeItem.ABI);
-                            } catch (e) {
-                                console.error('Error parsing ABI JSON:', e);
-                                setContractError('Invalid ABI format returned from Etherscan');
-                                setIsLoading(false);
-                                return;
-                            }
-                        }
-                        else if (sourceCodeItem.abi) {
-                            try {
-                                abiItems = JSON.parse(sourceCodeItem.abi);
-                            } catch (e) {
-                                console.error('Error parsing ABI JSON:', e);
-                                setContractError('Invalid ABI format returned from Etherscan');
-                                setIsLoading(false);
-                                return;
-                            }
+                const sourceCodeItem = result.abi;
+                if (sourceCodeItem) {
+                    if (Array.isArray(sourceCodeItem)) {
+                        // console.log("🚀 ~ fetchContractABI ~ isArray sourceCodeItem:", sourceCodeItem);
+                        abiItems = sourceCodeItem.map(convertCeloscanToEtherscanAbi);
+                        console.log("🚀 ~ fetchContractABI ~ abiItems:", abiItems)
+                    }
+                    else {
+                        try {
+                            abiItems = JSON.parse(sourceCodeItem);
+                        } catch (e) {
+                            console.error('Error parsing ABI JSON:', e);
+                            setContractError('Invalid ABI format returned from Etherscan');
+                            setIsLoading(false);
+                            return;
                         }
                     }
                 }
-                // else if (result.result) {
-                //     try {
-                //         abiItems = JSON.parse(result.result);
-                //     } catch (e) {
-                //         console.error('Error parsing ABI JSON:', e);
-                //         setContractError('Invalid ABI format returned from Etherscan');
-                //         setIsLoading(false);
-                //         return;
-                //     }
-                // }
+
                 if (abiItems.length === 0) {
                     setContractError('No ABI found for this contract');
                     setIsLoading(false);
